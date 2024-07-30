@@ -252,6 +252,17 @@ def mode(
   # jax.debug.print("exc shape {exc}", exc=exc.shape)
   exc = jnp.expand_dims(exc, "xyz".index(prop_axis) + 2)
 
-  # jax.debug.print("exc shape {exc}", exc=exc.shape)
+  # Ensure consistent sign for mode profiles. This is unvectorized and inefficient because I can't be bothered to make it better rn.
+  #However, mode computation need only be done once prior to optimization, so it can be as slow and inefficient as I want.
+  def normalize_sign(x):
+    xSigns,xS=[],x.shape
+    for ww in range(xS[0]):
+      for mm in range(xS[-1]):
+        maxAbsInd=jnp.argmax(jnp.abs(x[ww,:,:,:,:,mm]))
+        xSign=jnp.sign(jnp.ravel(x[ww,:,:,:,:,mm])[maxAbsInd])
+        x=x.at[ww,:,:,:,:,mm].multiply(xSign)
+    return x
+    # Normalize the sign of the modes
+  exc = normalize_sign(exc)
 
   return wavevector, exc, err, iters
